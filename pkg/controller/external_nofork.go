@@ -330,6 +330,26 @@ func filterInitExclusiveDiffs(tr resource.Terraformed, instanceDiff *tf.Instance
 		}
 	}
 
+	// When a length key, such as "tags.%" or "private_ip_list.#", doesn't have any corresponding
+	// element keys, such as "tags.foo" or "private_ip_list.0", then the length key is redundant.
+	// Redundant length keys should be removed. Otherwise, they will cause diffs to be non-empty,
+	// even though there is no real difference to be applied, therefore causing infinite update
+	// loops.
+	nonRedundantLengthKeyPrefixes := make(map[string]struct{})
+	for attributeKey := range instanceDiff.Attributes {
+		if strings.HasSuffix(attributeKey, ".%") || strings.HasSuffix(attributeKey, ".#") {
+			continue
+		}
+
+		keyComponents := strings.Split(attributeKey, ".")
+		if len(keyComponents) < 2 {
+			continue
+		}
+
+		attributeKeyPrefix := strings.Join(keyComponents[0:len(keyComponents)-1], ".")
+		nonRedundantLengthKeyPrefixes[attributeKeyPrefix] = struct{}{}
+	}
+
 	// Delete length keys, such as "tags.%" (schema.TypeMap) and
 	// "cidrBlocks.#" (schema.TypeSet), because of two reasons:
 	//
@@ -343,6 +363,11 @@ func filterInitExclusiveDiffs(tr resource.Terraformed, instanceDiff *tf.Instance
 	for _, keyToIgnore := range initProviderExclusiveParamKeys {
 		keyComponents := strings.Split(keyToIgnore, ".")
 		if len(keyComponents) < 2 {
+			continue
+		}
+
+		keyPrefix := strings.Join(keyComponents[0:len(keyComponents)-1], ".")
+		if _, ok := nonRedundantLengthKeyPrefixes[keyPrefix]; ok {
 			continue
 		}
 
