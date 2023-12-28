@@ -7,6 +7,7 @@ package config
 import (
 	"strings"
 
+	fwresource "github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 
 	"github.com/crossplane/upjet/pkg/registry"
@@ -56,7 +57,7 @@ type ResourceOption func(*Resource)
 
 // DefaultResource keeps an initial default configuration for all resources of a
 // provider.
-func DefaultResource(name string, terraformSchema *schema.Resource, terraformRegistry *registry.Resource, opts ...ResourceOption) *Resource {
+func DefaultResource(name string, terraformSchema *schema.Resource, terraformPluginFrameworkResource *fwresource.Resource, terraformRegistry *registry.Resource, opts ...ResourceOption) *Resource {
 	words := strings.Split(name, "_")
 	// As group name we default to the second element if resource name
 	// has at least 3 elements, otherwise, we took the first element as
@@ -77,17 +78,18 @@ func DefaultResource(name string, terraformSchema *schema.Resource, terraformReg
 	}
 
 	r := &Resource{
-		Name:                 name,
-		TerraformResource:    terraformSchema,
-		MetaResource:         terraformRegistry,
-		ShortGroup:           group,
-		Kind:                 kind,
-		Version:              "v1alpha1",
-		ExternalName:         NameAsIdentifier,
-		References:           map[string]Reference{},
-		Sensitive:            NopSensitive,
-		UseAsync:             true,
-		SchemaElementOptions: make(map[string]*SchemaElementOption),
+		Name:                             name,
+		TerraformResource:                terraformSchema,
+		TerraformPluginFrameworkResource: terraformPluginFrameworkResource,
+		MetaResource:                     terraformRegistry,
+		ShortGroup:                       group,
+		Kind:                             kind,
+		Version:                          "v1alpha1",
+		ExternalName:                     NameAsIdentifier,
+		References:                       map[string]Reference{},
+		Sensitive:                        NopSensitive,
+		UseAsync:                         true,
+		SchemaElementOptions:             make(map[string]*SchemaElementOption),
 	}
 	for _, f := range opts {
 		f(r)
