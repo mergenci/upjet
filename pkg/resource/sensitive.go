@@ -353,7 +353,14 @@ func expandedFor(expanded fieldpath.Segments, withWildcard fieldpath.Segments) b
 }
 
 func normalizeJSONPath(s string) string {
-	return strings.TrimPrefix(strings.TrimPrefix(s, "spec.forProvider."), "status.atProvider.")
+	result := s
+
+	prefixes := []string{"spec.forProvider.", "spec.initProvider.", "status.atProvider."}
+	for _, prefix := range prefixes {
+		result = strings.TrimPrefix(result, prefix)
+	}
+
+	return result
 }
 
 func secretKeyToFieldPath(s string) (string, error) {
